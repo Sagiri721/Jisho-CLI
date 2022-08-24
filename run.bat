@@ -1,0 +1,1 @@
+node D:\TIAGO\program\aaa\jisho.js
