@@ -1,0 +1,5 @@
+{
+    "max_words": 20,
+    "max_kanji": 20,
+    "clear_after_search": false
+}
