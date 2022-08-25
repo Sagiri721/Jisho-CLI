@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import axios from "axios";
 import { getSettings } from "./settings.js";
 import { help } from "./utils.js";
-
+import { readFileSync } from "fs"
 
 const jisho = new JishoAPI();
 const settings = getSettings();
@@ -179,6 +179,75 @@ async function sentence_search() {
     console.log("############################################################################################################################################");
 }
 
+async function jlpt_sentence_words() {
+
+    console.log("\n----------------------------------------------------------------------------------------------------");
+
+    const ans = await inquirer.prompt([{
+        name: 'name',
+        message: "What JLPT(1-5)? "
+    }]);
+
+    console.log("\n----------------------------------------------------------------------------------------------------");
+
+    try {
+
+        let option = parseInt(ans.name);
+
+        if (option > 5 || option < 1) {
+
+            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("Invalid JLPT level");
+            console.log("----------------------------------------------------------------------------------------------------");
+            return;
+        }
+
+        let words_showing = settings.max_words;
+
+        console.log("Displaying words from the (offset)th term to the (offset + " + words_showing + ")th term");
+        const offsetinq = await inquirer.prompt([{
+            name: 'name',
+            message: "Offset? "
+        }]);
+
+        var offset = parseInt(offsetinq.name);
+
+        //Get word list
+        const words_obj = await get_words_jlpt(option.toString());
+
+        let index = 0;
+        words_obj.words.forEach(element => {
+
+            if (index >= offset) {
+
+                if (index == (offset + words_showing)) { return; }
+
+                //display words
+                console.log(index + ": " + element);
+                //Show sentences
+
+            }
+
+            index++;
+        })
+
+    } catch (error) {
+        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("Error processing");
+        console.log("----------------------------------------------------------------------------------------------------");
+
+        console.error(error);
+    }
+
+}
+
+async function get_words_jlpt(jlpt) {
+
+    let rawdata = readFileSync("words/" + jlpt + ".json");
+
+    return JSON.parse(rawdata);
+}
+
 console.clear();
 console.log(text);
 console.log("----------------------------------------------------------------------------------------------------");
@@ -234,21 +303,27 @@ async function app_loop() {
                     break;
                 case 3:
 
+                    //List jlpt kanji
                     await list_kanji();
                     break;
                 case 4:
 
-
+                    //List jlpt words
                     await list_words();
                     break;
                 case 5:
 
+                    //JLPT word with sentences
+                    await jlpt_sentence_words();
                     break;
                 case 6:
 
                     help();
                     break;
                 case 7: return;
+                case 8:
+
+                    break;
             }
 
         } else {
@@ -258,8 +333,9 @@ async function app_loop() {
 
         await inquirer.prompt([{ name: 'name', message: 'Press enter to continue' },]);
 
-        if (settings.clear_after_search)
+        if (settings.clear_after_search) {
             console.clear();
+        }
     }
 }
 
@@ -299,5 +375,6 @@ function show_kanji(name, kanji_data) {
     console.log("############################################################################################################################################");
 }
 
-app_loop();
-
+await app_loop();
+console.log("############################################################################################################################################");
+console.log("Finished");
