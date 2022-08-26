@@ -170,11 +170,7 @@ async function sentence_search() {
 
     console.log("############################################################################################################################################");
 
-    sentence_data.results.forEach(element => {
-
-        console.log(element.kanji + "\n " + element.kana + "\n " + element.english);
-        console.log("----------------------------------------------------------------------------------------------------");
-    })
+    show_sentence(sentence_data.results);
 
     console.log("############################################################################################################################################");
 }
@@ -214,22 +210,35 @@ async function jlpt_sentence_words() {
 
         //Get word list
         const words_obj = await get_words_jlpt(option.toString());
+        const sentences_show = settings.max_sentence_per_word;
 
-        let index = 0;
-        words_obj.words.forEach(element => {
+        let i = 0;
+        for (i = 0; i < words_obj.words.length; i++) {
 
-            if (index >= offset) {
+            if (i >= offset) {
 
-                if (index == (offset + words_showing)) { return; }
+                if (i == (offset + words_showing)) { return; }
 
                 //display words
-                console.log(index + ": " + element);
+                console.log("----------------------------------------------------------------------------------------------------");
+                console.log((i + 1).toString() + ": " + words_obj.words[i]);
                 //Show sentences
+                let keyword = words_obj.words[i].split(" ")[0];
 
+                await jisho.searchForExamples(keyword).then(sentence => {
+
+                    let j = 0;
+                    for (j = 0; j < sentences_show; j++) {
+
+                        const arr = sentence["results"][j];
+                        console.log();
+                        console.log(arr.kanji + "\n " + arr.kana + "\n " + arr.english);
+                    }
+                });
+
+                console.log("----------------------------------------------------------------------------------------------------\n");
             }
-
-            index++;
-        })
+        }
 
     } catch (error) {
         console.log("----------------------------------------------------------------------------------------------------");
@@ -267,11 +276,12 @@ async function app_loop() {
 
 //Study//
         (5)  JLPTを例文で学んで　～　Study JLPT with examples
+        (6)  フラシュカード　～　Flashcards
 
 //Other//
-        (6)  援助　～　Help
-        (7)  終了　～　Exit
-        (8)  設定を調整する  ～ Tweak settings
+        (7)  援助　～　Help
+        (8)  終了　～　Exit
+        (9)  設定を調整する  ～ Tweak settings
         `);
 
         const ans = await inquirer.prompt([
@@ -283,7 +293,7 @@ async function app_loop() {
 
         let answer = parseInt(ans.option);
 
-        if (answer >= 0 && answer <= 7) {
+        if (answer >= 0 && answer <= 9) {
 
             switch (answer) {
                 case 0:
@@ -318,10 +328,13 @@ async function app_loop() {
                     break;
                 case 6:
 
+                    break;
+                case 7:
+
                     help();
                     break;
-                case 7: return;
-                case 8:
+                case 8: return;
+                case 9:
 
                     break;
             }
@@ -373,6 +386,15 @@ function show_kanji(name, kanji_data) {
     console.log("#　Level: JLPT " + kanji_data.jlptLevel + " | Newspaper frequency " + kanji_data.newspaperFrequencyRank + " | Taught in " + kanji_data.taughtIn);
     console.log("#　Strokes: " + kanji_data.strokeCount);
     console.log("############################################################################################################################################");
+}
+
+function show_sentence(results) {
+
+    results.forEach(element => {
+
+        console.log(element.kanji + "\n " + element.kana + "\n " + element.english);
+        console.log("----------------------------------------------------------------------------------------------------");
+    })
 }
 
 await app_loop();
