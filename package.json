@@ -4,6 +4,7 @@
     "axios": "^0.27.2",
     "fs": "^0.0.1-security",
     "inquirer": "^9.1.0",
+    "sqlite3": "^5.0.11",
     "unofficial-jisho-api": "^2.3.0"
   }
 }

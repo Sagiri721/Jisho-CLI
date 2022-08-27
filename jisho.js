@@ -4,7 +4,8 @@ import inquirer from 'inquirer';
 import axios from "axios";
 import { getSettings } from "./settings.js";
 import { help } from "./utils.js";
-import { readFileSync } from "fs"
+import { readFileSync, readdirSync } from "fs"
+import { flashcard_init } from "./flashcard.js";
 
 const jisho = new JishoAPI();
 const settings = getSettings();
@@ -230,9 +231,13 @@ async function jlpt_sentence_words() {
                     let j = 0;
                     for (j = 0; j < sentences_show; j++) {
 
-                        const arr = sentence["results"][j];
-                        console.log();
-                        console.log(arr.kanji + "\n " + arr.kana + "\n " + arr.english);
+                        try {
+
+                            const arr = sentence["results"][j];
+                            console.log();
+                            console.log(arr.kanji + "\n " + arr.kana + "\n " + arr.english);
+
+                        } catch (error) { }
                     }
                 });
 
@@ -248,6 +253,64 @@ async function jlpt_sentence_words() {
         console.error(error);
     }
 
+}
+
+async function show_flashcards() {
+
+    console.log("\n----------------------------------------------------------------------------------------------------");
+    console.log("FLASH CARDS");
+
+    const flashfolder = readdirSync("flashcard_packs");
+    var databases = [];
+
+    let i = 0, ii = 0;
+    for (i = 0; i < flashfolder.length; i++) {
+
+        if (flashfolder[i].includes(".db")) {
+
+            console.log("(" + ii + ") " + flashfolder[i].split(".")[0]);
+            databases.push(flashfolder[i].split(".")[0]);
+
+            ii++;
+        }
+    }
+
+    if (databases.length == 0) {
+
+        console.log("No databases found");
+        return;
+    }
+
+    const ans = await inquirer.prompt([{
+        name: 'name',
+        message: "Choose a flashcard pack"
+    }]);
+
+    try {
+
+        const opt = parseInt(ans.name);
+
+        if (opt < 0 || opt >= databases.length) {
+
+            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("Error processing");
+            console.log("----------------------------------------------------------------------------------------------------");
+            return;
+        } else {
+
+            //Show flashcards
+            //Receive settings.flashcards.per.day cards that havent been seen from the data base
+            const cards = await flashcard_init(databases[opt], settings.flashcards_per_day);
+
+            console.log(cards);
+        }
+
+    } catch (err) {
+
+        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("Error processing");
+        console.log("----------------------------------------------------------------------------------------------------");
+    }
 }
 
 async function get_words_jlpt(jlpt) {
@@ -267,7 +330,7 @@ async function app_loop() {
 
         console.log(`//Search//
         (0) 漢字検索　～　Kanji search
-        (1) 語彙検索　～　Vocab search
+        (1) 語彙検索　～　Vocab search (English / romaji) 
         (2) 文章検索　～　Sentence search
 
 //List//
@@ -328,6 +391,8 @@ async function app_loop() {
                     break;
                 case 6:
 
+                    //Flashcards
+                    await show_flashcards();
                     break;
                 case 7:
 
@@ -336,6 +401,18 @@ async function app_loop() {
                 case 8: return;
                 case 9:
 
+                    //Change settings
+                    console.log("\nCurrent session's settings:");
+                    console.log("############################################################################################################################################\n");
+
+                    console.log("Maximum of words showed in JLPT study and vocabulary List: " + settings.max_words);
+                    console.log("Maximum of words kanjis on kanji list: " + settings.max_kanji);
+                    console.log("Clears screen after one program cycle? " + settings.clear_after_search);
+                    console.log("Maximum number of sentences showed on JLPT study (doesn't change efficiency) (shouldn't be above 17 for safety reasons): " + settings.max_sentence_per_word);
+                    console.log("Number of flashcard per day: " + settings.flashcards_per_day);
+
+                    console.log("\n############################################################################################################################################");
+                    console.log("*restart the app when settings are changed*\n");
                     break;
             }
 
@@ -398,5 +475,4 @@ function show_sentence(results) {
 }
 
 await app_loop();
-console.log("############################################################################################################################################");
-console.log("Finished");
+console.log("######################################################### Execution End #########################################################");
