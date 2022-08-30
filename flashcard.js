@@ -123,3 +123,14 @@ export function update_flashcard_points(name, replacement) {
         db.run(sql);
     }
 }
+
+function rr(file) {
+
+    let obj = JSON.parse(readFileSync(file));
+
+
+    obj.kanjis.forEach(element => {
+
+        console.log("\"" + element.split(" ")[0] + "\",");
+    });
+}
