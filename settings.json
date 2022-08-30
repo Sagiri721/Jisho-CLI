@@ -3,5 +3,6 @@
     "max_kanji": 20,
     "clear_after_search": false,
     "max_sentence_per_word": 5,
-    "flashcards_per_day": 10
+    "flashcards_per_day": 5,
+    "max_flashcard_examples": 2
 }

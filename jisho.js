@@ -1,11 +1,10 @@
 import JishoAPI from "unofficial-jisho-api";
-import { text } from "./utils.js"
+import { text, help } from "./utils.js"
 import inquirer from 'inquirer';
 import axios from "axios";
 import { getSettings } from "./settings.js";
-import { help } from "./utils.js";
 import { readFileSync, readdirSync } from "fs"
-import { flashcard_init } from "./flashcard.js";
+import { flashcard_init, Card, update_flashcard_points } from "./flashcard.js";
 
 const jisho = new JishoAPI();
 const settings = getSettings();
@@ -302,15 +301,113 @@ async function show_flashcards() {
             //Receive settings.flashcards.per.day cards that havent been seen from the data base
             const cards = await flashcard_init(databases[opt], settings.flashcards_per_day);
 
-            console.log(cards);
+
+            //Fetch card information
+            await cards.forEach(async (element) => {
+
+                //Get word data
+                const word_data = await jisho.searchForPhrase(element.word);
+                const sentence_example = await jisho.searchForExamples(element.word);
+
+                var sentence_list = [];
+                let i = 0;
+                for (i = 0; i < settings.max_flashcard_examples; i++) {
+                    sentence_list.push(sentence_example.results[i]);
+                }
+
+                var english_meaning = [];
+
+                word_data['data'][0].senses.forEach(element => {
+
+                    english_meaning.push(element.english_definitions);
+                });
+
+                element.addMeaningReadingExample(english_meaning, word_data['data'][0].japanese[0].reading, sentence_list);
+            });
+
+            //Display the first flashcard
+            let current_card = 0;
+            let done = false, cycle = 0;
+
+            while (!done) {
+
+                //Display cards
+                console.log("######################################################################\n");
+                console.log("Do you recognise this word?");
+
+                console.log(cards[current_card].word + "\n");
+
+                const ans = await inquirer.prompt([{
+                    name: 'name',
+                    message: "y/n "
+                }]);
+
+                if (ans.name == "y") {
+
+                    //Points += 1;
+
+                    if (cards[current_card].points == -9999) {
+                        cards[current_card].points = 0;
+                    } else {
+
+                        cards[current_card].points++;
+                    }
+                } else {
+
+                    //Points += -1: doesn't know
+                    cards[current_card].showCard();
+                }
+
+                //Repeat the cycle until all words have points > 0 
+                cycle++;
+
+                if (cycle == 3) {
+                    break;
+                }
+                done = cycle_control(cards);
+                current_card++;
+
+                if (current_card == cards.length) {
+
+                    let index = 0;
+                    cards.forEach(function (element) {
+
+                        if (element.points < 1) {
+                            current_card = index;
+                            return;
+                        }
+
+                        index++;
+                    });
+                }
+            }
+
+            //Apply local changes to the flashcard pack to the physical database
+            update_flashcard_points(databases[opt], cards);
+
+            console.log("############################ Daily flashcards complete ############################");
+
         }
 
     } catch (err) {
+
+        console.error(err.message);
 
         console.log("----------------------------------------------------------------------------------------------------");
         console.log("Error processing");
         console.log("----------------------------------------------------------------------------------------------------");
     }
+}
+
+function cycle_control(cards) {
+
+    let i = 0;
+    for (i = 0; i < cards.length; i++) {
+
+        if (cards[i].points < 0) return false;
+    }
+
+    return true;
 }
 
 async function get_words_jlpt(jlpt) {
@@ -328,20 +425,20 @@ async function app_loop() {
 
     while (true) {
 
-        console.log(`//Search//
+        console.log(`       //Search//\n
         (0) 漢字検索　～　Kanji search
         (1) 語彙検索　～　Vocab search (English / romaji) 
         (2) 文章検索　～　Sentence search
 
-//List//
+        //List//\n
         (3)　漢字リスト　～　Kanji list
         (4)　語彙リスト　～　Vocab list
 
-//Study//
+        //Study//\n
         (5)  JLPTを例文で学んで　～　Study JLPT with examples
         (6)  フラシュカード　～　Flashcards
 
-//Other//
+        //Other//\n
         (7)  援助　～　Help
         (8)  終了　～　Exit
         (9)  設定を調整する  ～ Tweak settings
@@ -410,6 +507,7 @@ async function app_loop() {
                     console.log("Clears screen after one program cycle? " + settings.clear_after_search);
                     console.log("Maximum number of sentences showed on JLPT study (doesn't change efficiency) (shouldn't be above 17 for safety reasons): " + settings.max_sentence_per_word);
                     console.log("Number of flashcard per day: " + settings.flashcards_per_day);
+                    console.log("Number of examples showed per flashcard: " + settings.max_flashcard_examples);
 
                     console.log("\n############################################################################################################################################");
                     console.log("*restart the app when settings are changed*\n");
