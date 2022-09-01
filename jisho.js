@@ -5,9 +5,56 @@ import axios from "axios";
 import { getSettings } from "./settings.js";
 import { readFileSync, readdirSync } from "fs"
 import { flashcard_init, Card, update_flashcard_points } from "./flashcard.js";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+
+var colors = require("colors");
 
 const jisho = new JishoAPI();
 const settings = getSettings();
+
+const actions = {
+
+    "0": async function () { await kanji_meaning(); },
+    "1": async function () { await word_search(); },
+    "2": async function () { await sentence_search() },
+    "3": async function () { await list_kanji() },
+    "4": async function () { await list_words() },
+    "5": async function () { await jlpt_sentence_words() },
+    "6": async function () { await show_flashcards() },
+    "7": async function () { help(); },
+    "9": async function () { print_settings(); }
+}
+
+function print_settings() {
+
+    console.log("\nCurrent session's settings:".magenta);
+    console.log(
+        "############################################################################################################################################\n"
+            .magenta);
+
+    console.log(
+        ("Maximum of words showed in JLPT study and vocabulary List: " + settings.max_words)
+            .magenta);
+    console.log(
+        ("Maximum of words kanjis on kanji list: " + settings.max_kanji)
+            .magenta);
+    console.log(
+        ("Clears screen after one program cycle? " + settings.clear_after_search)
+            .magenta);
+    console.log(
+        ("Maximum number of sentences showed on JLPT study (doesn't change efficiency) (shouldn't be above 17 for safety reasons): " + settings.max_sentence_per_word)
+            .magenta);
+    console.log(
+        ("Number of flashcard per day: " + settings.flashcards_per_day)
+            .magenta);
+
+    console.log(
+        "\n############################################################################################################################################"
+            .magenta);
+    console.log("*restart the app when settings are changed*\n".magenta);
+}
 
 async function kanji_meaning() {
 
@@ -52,9 +99,9 @@ async function word_search() {
 
         } catch (error) {
 
-            console.log("----------------------------------------------------------------------------------------------------");
-            console.log("Word not found");
-            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Word not found".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
         }
     }
 }
@@ -76,9 +123,9 @@ async function list_kanji() {
 
         if (option > 5 || option < 1) {
 
-            console.log("----------------------------------------------------------------------------------------------------");
-            console.log("Invalid JLPT level");
-            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid JLPT level".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
             return;
         }
 
@@ -86,9 +133,9 @@ async function list_kanji() {
 
     } catch (error) {
 
-        console.log("----------------------------------------------------------------------------------------------------");
-        console.log("Error processing");
-        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Error processing".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
     }
 }
 
@@ -109,9 +156,9 @@ async function list_words() {
 
         if (option > 5 || option < 1) {
 
-            console.log("----------------------------------------------------------------------------------------------------");
-            console.log("Invalid JLPT level");
-            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid JLPT level".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
             return;
         }
 
@@ -145,9 +192,9 @@ async function list_words() {
 
     } catch (error) {
 
-        console.log("----------------------------------------------------------------------------------------------------");
-        console.log("Error processing");
-        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Error processing".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
     }
 }
 
@@ -192,9 +239,9 @@ async function jlpt_sentence_words() {
 
         if (option > 5 || option < 1) {
 
-            console.log("----------------------------------------------------------------------------------------------------");
-            console.log("Invalid JLPT level");
-            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid JLPT level".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
             return;
         }
 
@@ -245,9 +292,9 @@ async function jlpt_sentence_words() {
         }
 
     } catch (error) {
-        console.log("----------------------------------------------------------------------------------------------------");
-        console.log("Error processing");
-        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Error processing".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
 
         console.error(error);
     }
@@ -291,9 +338,9 @@ async function show_flashcards() {
 
         if (opt < 0 || opt >= databases.length) {
 
-            console.log("----------------------------------------------------------------------------------------------------");
-            console.log("Error processing");
-            console.log("----------------------------------------------------------------------------------------------------");
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Error processing".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
             return;
         } else {
 
@@ -393,9 +440,9 @@ async function show_flashcards() {
 
         console.error(err.message);
 
-        console.log("----------------------------------------------------------------------------------------------------");
-        console.log("Error processing");
-        console.log("----------------------------------------------------------------------------------------------------");
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Error processing".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
     }
 }
 
@@ -418,14 +465,14 @@ async function get_words_jlpt(jlpt) {
 }
 
 console.clear();
-console.log(text);
+console.log(text.yellow);
 console.log("----------------------------------------------------------------------------------------------------");
 
 async function app_loop() {
 
     while (true) {
 
-        console.log(`       //Search//\n
+        console.log(`//Search//\n
         (0) 漢字検索　～　Kanji search
         (1) 語彙検索　～　Vocab search (English / romaji) 
         (2) 文章検索　～　Sentence search
@@ -455,68 +502,12 @@ async function app_loop() {
 
         if (answer >= 0 && answer <= 9) {
 
-            switch (answer) {
-                case 0:
-
-                    //Kanji meaning
-                    await kanji_meaning();
-                    break;
-                case 1:
-
-                    //Word meaning
-                    await word_search();
-                    break;
-                case 2:
-
-                    //Sentence from word
-                    await sentence_search();
-                    break;
-                case 3:
-
-                    //List jlpt kanji
-                    await list_kanji();
-                    break;
-                case 4:
-
-                    //List jlpt words
-                    await list_words();
-                    break;
-                case 5:
-
-                    //JLPT word with sentences
-                    await jlpt_sentence_words();
-                    break;
-                case 6:
-
-                    //Flashcards
-                    await show_flashcards();
-                    break;
-                case 7:
-
-                    help();
-                    break;
-                case 8: return;
-                case 9:
-
-                    //Change settings
-                    console.log("\nCurrent session's settings:");
-                    console.log("############################################################################################################################################\n");
-
-                    console.log("Maximum of words showed in JLPT study and vocabulary List: " + settings.max_words);
-                    console.log("Maximum of words kanjis on kanji list: " + settings.max_kanji);
-                    console.log("Clears screen after one program cycle? " + settings.clear_after_search);
-                    console.log("Maximum number of sentences showed on JLPT study (doesn't change efficiency) (shouldn't be above 17 for safety reasons): " + settings.max_sentence_per_word);
-                    console.log("Number of flashcard per day: " + settings.flashcards_per_day);
-                    console.log("Number of examples showed per flashcard: " + settings.max_flashcard_examples);
-
-                    console.log("\n############################################################################################################################################");
-                    console.log("*restart the app when settings are changed*\n");
-                    break;
-            }
+            if (answer == 8) return;
+            await actions[answer.toString()]();
 
         } else {
 
-            console.log("Bad input");
+            console.log("Bad input".red);
         }
 
         await inquirer.prompt([{ name: 'name', message: 'Press enter to continue' },]);
@@ -571,6 +562,5 @@ function show_sentence(results) {
         console.log("----------------------------------------------------------------------------------------------------");
     })
 }
-
 await app_loop();
-console.log("######################################################### Execution End #########################################################");
+console.log("######################################################### Execution End #########################################################".bgBlue);

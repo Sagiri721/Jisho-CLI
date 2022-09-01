@@ -1,7 +1,7 @@
 {
     "max_words": 20,
     "max_kanji": 20,
-    "clear_after_search": false,
+    "clear_after_search": true,
     "max_sentence_per_word": 5,
     "flashcards_per_day": 5,
     "max_flashcard_examples": 2
