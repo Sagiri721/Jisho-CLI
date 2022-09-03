@@ -18,13 +18,14 @@ const actions = {
 
     "0": async function () { await kanji_meaning(); },
     "1": async function () { await word_search(); },
-    "2": async function () { await sentence_search() },
-    "3": async function () { await list_kanji() },
-    "4": async function () { await list_words() },
-    "5": async function () { await jlpt_sentence_words() },
-    "6": async function () { await show_flashcards() },
-    "7": async function () { help(); },
-    "9": async function () { print_settings(); }
+    "2": async function () { await word_search_japanese(); },
+    "3": async function () { await sentence_search() },
+    "4": async function () { await list_kanji() },
+    "5": async function () { await list_words() },
+    "6": async function () { await jlpt_sentence_words() },
+    "7": async function () { await show_flashcards() },
+    "9": async function () { help(); },
+    "10": async function () { print_settings(); }
 }
 
 function print_settings() {
@@ -78,48 +79,63 @@ async function kanji_meaning() {
 
 async function word_search() {
 
-    let ans = await inquirer.prompt([{
-        name: 'name',
-        message: "Word? "
-    }]);
+    let ans = await input("Word? ");
 
     //Perform a self search from the json web api
-    const url = "https://jisho.org/api/v1/search/words?keyword=" + ans.name;
+    const url = "https://jisho.org/api/v1/search/words?keyword=" + ans;
     const response = await (await axios.get(url)).data;
 
     //Get first response
     var word_data = response["data"][0];
 
-    if (true) {
+    try {
+        word_data.slug;
 
-        try {
-            word_data.slug;
+        show_word(ans.name, word_data);
 
-            show_word(ans.name, word_data);
+    } catch (error) {
 
-        } catch (error) {
-
-            console.log("----------------------------------------------------------------------------------------------------".red);
-            console.log("Word not found".red);
-            console.log("----------------------------------------------------------------------------------------------------".red);
-        }
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Word not found".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
     }
+
+}
+
+async function word_search_japanese() {
+
+    let ans = await input("Word? ");
+
+    let words_search = await jisho.searchForPhrase(ans);
+
+    try {
+
+        let word_data = words_search.data[0];
+        word_data.slug;
+
+        show_word(ans, word_data);
+
+    } catch (error) {
+
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.log("Word not found".red);
+        console.log("----------------------------------------------------------------------------------------------------".red);
+        console.error(error);
+    }
+
 }
 
 async function list_kanji() {
 
     console.log("\n----------------------------------------------------------------------------------------------------");
 
-    const ans = await inquirer.prompt([{
-        name: 'name',
-        message: "What JLPT(1-5)? "
-    }]);
+    const ans = await input("What JLPT(1-5)? ");
 
     console.log("\n----------------------------------------------------------------------------------------------------");
 
     try {
 
-        let option = parseInt(ans.name);
+        let option = parseInt(ans);
 
         if (option > 5 || option < 1) {
 
@@ -129,13 +145,47 @@ async function list_kanji() {
             return;
         }
 
+        const data = await get_kanji_jlpt(option.toString());
+        var offset = await input("Offset? ");
 
+        search_op:
+        if (!isNaN(offset)) {
+
+            offset = parseInt(offset);
+        } else {
+
+            for (let i = 0; i < data.kanjis.length; i++) {
+
+                if (data.kanjis[i].split(" ")[0] == offset) {
+
+                    offset = i;
+                    break search_op;
+                }
+            }
+
+            console.log("No offset match was found".red);
+            return;
+        }
+
+        if ((offset + settings.max_kanji) >= data.kanjis.length) {
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid offset".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            return;
+        }
+
+        for (let i = offset; i < offset + settings.max_kanji; i++) {
+
+            let response = await jisho.searchForKanji(data.kanjis[i]);
+            show_kanji(data.kanjis[i], response);
+        }
 
     } catch (error) {
 
         console.log("----------------------------------------------------------------------------------------------------".red);
         console.log("Error processing".red);
         console.log("----------------------------------------------------------------------------------------------------".red);
+        console.error(error.message);
     }
 }
 
@@ -143,16 +193,12 @@ async function list_words() {
 
     console.log("\n----------------------------------------------------------------------------------------------------");
 
-    const ans = await inquirer.prompt([{
-        name: 'name',
-        message: "What JLPT(1-5)? "
-    }]);
-
+    const ans = await input("What JLPT(1-5)? ");
     console.log("\n----------------------------------------------------------------------------------------------------");
 
     try {
 
-        let option = parseInt(ans.name);
+        let option = parseInt(ans);
 
         if (option > 5 || option < 1) {
 
@@ -162,32 +208,44 @@ async function list_words() {
             return;
         }
 
-        let page = 1, word_count = 0, relative_word_count = 0;
-        const url = "https://jisho.org/api/v1/search/words?keyword=%23jlpt-n" + option.toString() + "&page=" + page;
+        const data = await get_words_jlpt(option.toString());
+        var offset = await input("Offset? ");
 
-        var pagedata = await (await axios.get(url)).data;
-        pagedata = pagedata.data;
-        while (word_count < settings.max_words) {
+        search_op:
+        if (!isNaN(offset)) {
 
-            try {
+            offset = parseInt(offset);
+        } else {
 
-                pagedata.slug;
-                show_word(null, pagedata[relative_word_count]);
-            } catch (error) {
+            for (let i = 0; i < data.words.length; i++) {
 
-                //Check for error type
-                if (word_count < settings.max_words) {
-                    //Goto next page
+                if (data.words[i].split(" ")[0] == offset) {
 
-                    page++;
-                    let newurl = "https://jisho.org/api/v1/search/words?keyword=%23jlpt-n" + option.toString() + "&page=" + page;
-                    pagedata = await (await axios.get(newurl)).data;
-                    relative_word_count = 0;
+                    offset = i;
+                    break search_op;
                 }
             }
 
-            relative_word_count++;
-            word_count++;
+            console.log("No offset match was found".red);
+            return;
+        }
+
+        if ((offset + settings.max_words) >= data.words.length) {
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid offset".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            return;
+        }
+
+        for (let i = offset; i < offset + settings.max_words; i++) {
+
+            let keyword = data.words[i].split(" ")[0];
+
+            let response = await jisho.searchForPhrase(keyword);
+            let word_data = response['data'][0];
+
+            //console.log(response);
+            show_word(keyword, word_data);
         }
 
     } catch (error) {
@@ -195,17 +253,15 @@ async function list_words() {
         console.log("----------------------------------------------------------------------------------------------------".red);
         console.log("Error processing".red);
         console.log("----------------------------------------------------------------------------------------------------".red);
+        console.error(error.message);
     }
 }
 
 async function sentence_search() {
 
-    let ans = await inquirer.prompt([{
-        name: 'name',
-        message: "Word to contain in sentences:  "
-    }]);
+    let ans = await input("Word to contain in sentences: ");
 
-    const sentence_data = await jisho.searchForExamples(ans.name);
+    const sentence_data = await jisho.searchForExamples(ans);
 
     if (sentence_data.results.length == 0) {
 
@@ -226,16 +282,13 @@ async function jlpt_sentence_words() {
 
     console.log("\n----------------------------------------------------------------------------------------------------");
 
-    const ans = await inquirer.prompt([{
-        name: 'name',
-        message: "What JLPT(1-5)? "
-    }]);
+    const ans = await input("What JLPT(1-5)? ");
 
     console.log("\n----------------------------------------------------------------------------------------------------");
 
     try {
 
-        let option = parseInt(ans.name);
+        let option = parseInt(ans);
 
         if (option > 5 || option < 1) {
 
@@ -248,15 +301,21 @@ async function jlpt_sentence_words() {
         let words_showing = settings.max_words;
 
         console.log("Displaying words from the (offset)th term to the (offset + " + words_showing + ")th term");
-        const offsetinq = await inquirer.prompt([{
-            name: 'name',
-            message: "Offset? "
-        }]);
+        const offsetinq = await input("Offset? ");
 
-        var offset = parseInt(offsetinq.name);
+        var offset = parseInt(offsetinq);
 
         //Get word list
         const words_obj = await get_words_jlpt(option.toString());
+
+
+        if ((offset + settings.max_words) >= words_obj.words.length) {
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            console.log("Invalid offset".red);
+            console.log("----------------------------------------------------------------------------------------------------".red);
+            return;
+        }
+
         const sentences_show = settings.max_sentence_per_word;
 
         let i = 0;
@@ -464,6 +523,23 @@ async function get_words_jlpt(jlpt) {
     return JSON.parse(rawdata);
 }
 
+async function get_kanji_jlpt(jlpt) {
+
+    let rawdata = readFileSync("kanji/" + jlpt + ".json");
+
+    return JSON.parse(rawdata);
+}
+
+async function input(question) {
+
+    let ans = await inquirer.prompt([{
+        name: 'name',
+        message: question
+    }]);
+
+    return ans.name;
+}
+
 console.clear();
 console.log(text.yellow);
 console.log("----------------------------------------------------------------------------------------------------");
@@ -474,21 +550,22 @@ async function app_loop() {
 
         console.log(`//Search//\n
         (0) 漢字検索　～　Kanji search
-        (1) 語彙検索　～　Vocab search (English / romaji) 
-        (2) 文章検索　～　Sentence search
+        (1) 語彙検索　(英語とローマ字) ～　Vocab search (English / romaji) 
+        (2) 語彙検索 （日本語）～　Vocab search (Japanese) 
+        (3) 文章検索　～　Sentence search
 
         //List//\n
-        (3)　漢字リスト　～　Kanji list
-        (4)　語彙リスト　～　Vocab list
+        (4)　漢字リスト　～　Kanji list
+        (5)　語彙リスト　～　Vocab list
 
         //Study//\n
-        (5)  JLPTを例文で学んで　～　Study JLPT with examples
-        (6)  フラシュカード　～　Flashcards
+        (6)  JLPTを例文で学んで　～　Study JLPT with examples
+        (7)  フラシュカード　～　Flashcards
 
         //Other//\n
-        (7)  援助　～　Help
-        (8)  終了　～　Exit
-        (9)  設定を調整する  ～ Tweak settings
+        (8)  援助　～　Help
+        (9)  終了　～　Exit
+        (10)  設定を調整する  ～ Tweak settings
         `);
 
         const ans = await inquirer.prompt([
@@ -500,7 +577,7 @@ async function app_loop() {
 
         let answer = parseInt(ans.option);
 
-        if (answer >= 0 && answer <= 9) {
+        if (answer >= 0 && answer <= 10) {
 
             if (answer == 8) return;
             await actions[answer.toString()]();

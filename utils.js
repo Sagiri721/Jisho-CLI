@@ -44,8 +44,10 @@ export function help() {
     console.log("# default limit is around 17 sentences.                #".yellow);
     console.log("#------------------------------------------------------#".yellow);
     console.log("# (3)(4): Lists kanji/vocabulary from a specific jlpt. #".yellow);
-    console.log("# The word/kanji limit is defaulted to 20, it can be   #".yellow);
-    console.log("# changed in the settings.                             #".yellow);
+    console.log("# The word/kanji, the offset is from where in the list #".yellow);
+    console.log("# to start displaying, if you type a word, that word   #".yellow);
+    console.log("# is searched and the offset is set to be the words p- #".yellow);
+    console.log("# osition.                                             #".yellow);
     console.log("#------------------------------------------------------#".yellow);
     console.log("# (5): Lists example sentences alogside JLPT vocabula- #".yellow);
     console.log("# ry to help students understand the context in which  #".yellow);
